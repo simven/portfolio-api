@@ -24,9 +24,11 @@ public class EmailService {
         this.webClient = webClientBuilder.baseUrl("https://www.google.com/recaptcha/api").build();
     }
 
-    public Mono<String> sendEmail(EmailDTO emailDTO, String token) {
-        return recaptchaVerified(token).flatMap(isVerified -> {
-            if (isVerified) {
+    public void sendEmail(EmailDTO emailDTO, String token) throws Exception {
+        boolean isVerified = recaptchaVerified(token);
+
+        if (isVerified) {
+            try {
                 // Si le reCAPTCHA est validé, envoyer l'email
                 Configuration toEmail = this.configurationRepository.findByName("TO_EMAIL");
                 Configuration from = this.configurationRepository.findByName("FROM_EMAIL");
@@ -39,15 +41,15 @@ public class EmailService {
                 message.setFrom(emailDTO.getName() + "<" + from.getValue() + ">");
 
                 mailSender.send(message);
-                return Mono.just("Email envoyé !");
-            } else {
-                // Si le reCAPTCHA échoue, retourner un message d'erreur
-                return Mono.just("Échec de la vérification reCAPTCHA.");
+            } catch (Exception e) {
+                throw new Exception("Erreur lors de l'envoie du mail.");
             }
-        });
+        } else {
+            throw new Exception("Échec de la vérification reCAPTCHA.");
+        }
     }
 
-    private Mono<Boolean> recaptchaVerified(String token) {
+    private Boolean recaptchaVerified(String token) {
         String secretKey = this.configurationRepository.findByName("CAPTCHA_SECRET_KEY").getValue();
 
         return this.webClient
@@ -55,6 +57,7 @@ public class EmailService {
                 .uri("/siteverify?secret={secretKey}&response={token}", secretKey, token)
                 .retrieve()
                 .bodyToMono(Map.class)
-                .map(response -> (Boolean) response.get("success"));
+                .map(response -> (Boolean) response.get("success"))
+                .block();
     }
 }

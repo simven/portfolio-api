@@ -16,7 +16,7 @@ public class EmailController {
     }
 
     @PostMapping("/send")
-    public Mono<String> sendEmail(@RequestBody EmailDTO emailDTO, @RequestParam String token) {
-        return this.emailService.sendEmail(emailDTO, token);
+    public void sendEmail(@RequestBody EmailDTO emailDTO, @RequestParam String token) throws Exception {
+        this.emailService.sendEmail(emailDTO, token);
     }
 }
